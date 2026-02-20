@@ -15,8 +15,8 @@ public abstract class GenericMapper <E, D>{
     }
 
 
-        public List<E> toEntity(List<D> entities){
-            return entities.stream().map(e-> toEntity(e))
+        public List<E> toEntity(List<D> entities) {
+            return entities.stream().map(e -> toEntity(e))
                     .collect((Collectors.toList()));
-        
+        }
 }

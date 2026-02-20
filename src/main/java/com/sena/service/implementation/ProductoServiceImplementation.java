@@ -1,12 +1,17 @@
 package com.sena.service.implementation;
 
+import com.sena.dto.ProductoDTO;
 import com.sena.entity.Producto;
+import com.sena.mapper.ProductoMapper;
 import com.sena.repository.ProductoRepository;
 import com.sena.service.ProductoService;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -14,36 +19,53 @@ public class ProductoServiceImplementation implements ProductoService {
 
 
     private final ProductoRepository repository;
+    private final ProductoMapper mapper;
 
-    public ProductoServiceImplementation(ProductoRepository repository){
+    public ProductoServiceImplementation(ProductoRepository repository, ProductoMapper mapper){
         this.repository = repository;
+        this.mapper = mapper;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Producto> findAll(Pageable pageable, String search) {
+    public Page<ProductoDTO> findAll(Pageable pageable, String search) {
+        Page<Producto> productos;
         if (search == null || search.trim().isEmpty()){
-            return repository.findAll(pageable);
+            productos = repository.findAll(pageable);
+        }else{
+            productos = repository.findByNombreContainingIgnoreCase(pageable, search);
         }
-        return repository.findByNombreContainingIgnoreCase(pageable, search);
+        return new PageImpl<>(
+                productos.getContent().stream()
+                        .map(mapper::toDTO)
+                        .collect(Collectors.toList()),
+                pageable,
+                productos.getTotalElements()
+
+        );
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Producto findById(Long id) {
-        return repository.findById(id).orElseThrow();
+    public ProductoDTO findById(Long id) {
+        Producto entidad = repository.findById(id).orElseThrow();
+        return mapper.toDTO(entidad);
     }
 
     @Override
-    public Producto create(Producto obj) {
-        return repository.save(obj);
+    public ProductoDTO create(ProductoDTO obj) {
+        Producto entidad = mapper.toEntity(obj);
+        Producto saved= repository.save(entidad);
+        return mapper.toDTO(saved);
     }
 
     @Override
-    public Producto update(Long id, Producto obj) {
+    public ProductoDTO update(Long id, ProductoDTO obj) {
+        Producto entidad = mapper.toEntity(obj);
         if (repository.existsById(id)){
-            obj.setId(id);
-            return repository.save(obj);
+            entidad.setId(id);
+            Producto saved = repository.save(entidad);
+            return mapper.toDTO(saved);
         }
         return null;
     }
